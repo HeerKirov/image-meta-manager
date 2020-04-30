@@ -1,0 +1,30 @@
+adapter:
+  public:
+    socks5: 127.0.0.1:1086
+    http: 127.0.0.1:1080
+    retry_count: 3
+    timeout: 15
+  complex:
+    proxy_strategy: 0
+  konachan:
+    proxy_strategy: 0
+  pixiv:
+    proxy_strategy: 'always'
+database:
+  path: data.db
+local:
+  path: folders
+  types: [jpg, jpeg, png, gif, webm, mp4]
+  strategy:
+    complex:
+      scan: 'sankakucomplex_(\d+)'
+      refer: 'https://chan.sankakucomplex.com/post/show/(\d+)'
+      rename: 'sankakucomplex_{0}.{extension}'
+    konachan:
+      scan: 'konachan_(\d+)'
+      refer: 'https://konachan.com/post/show/(\d+)'
+      rename: 'konachan_{0}.{extension}'
+    pixiv:
+      scan: 'pixiv_(\d+_p\d+)'
+      refer: 'https://www.pixiv.net/artworks/(\d+)'
+      rename: 'pixiv_{filename/.*?(\d+_p\d+)/0}.{extension}'
