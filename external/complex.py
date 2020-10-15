@@ -33,6 +33,9 @@ class Complex:
             return res.text, try_time, try_count, 'status code is %s' % (res.status_code,)
         res.encoding = 'utf-8'
 
+        with open('content.html', 'w') as f:
+            f.write(res.text)
+
         def find_tags():
             ret = []
             sidebar = soup.find('ul', id='tag-sidebar')
@@ -49,10 +52,8 @@ class Complex:
             ret = []
             preview = soup.find('div', id=div_id)
             if preview is not None:
-                reg = re.compile('/post/show/([0-9]+)')
                 for span in preview.find_all('span'):
-                    matcher = reg.match(span.find('a')['href'])
-                    id_ = matcher.group(1)
+                    id_ = span['id'][1:]
                     ret.append(id_)
             return ret
 
@@ -82,7 +83,7 @@ class Complex:
 
 if __name__ == '__main__':
     obj = Complex(adapter=Adapter(retry_count=1, timeout=15))
-    r, t, c, e = obj.post(6029415)
+    r, t, c, e = obj.post(18103477)
     if e is not None:
         print('ERROR: ' + e)
     else:
