@@ -33,9 +33,6 @@ class Complex:
             return res.text, try_time, try_count, 'status code is %s' % (res.status_code,)
         res.encoding = 'utf-8'
 
-        with open('content.html', 'w') as f:
-            f.write(res.text)
-
         def find_tags():
             ret = []
             sidebar = soup.find('ul', id='tag-sidebar')

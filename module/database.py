@@ -46,17 +46,20 @@ class Database:
             analyse_time TIMESTAMP NULL DEFAULT NULL
         )''')
         cursor.execute('CREATE UNIQUE INDEX IF NOT EXISTS meta_source_pid ON meta(source, pid)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS meta_analyse_status ON meta(source, status)')
         cursor.close()
         self.__conn.commit()
 
     def close(self):
         self.__conn.close()
 
-    def exist(self, source, pid):
+    def query_basic(self, source, pid):
         cursor = self.__conn.cursor()
         try:
-            return cursor.execute('SELECT count(1) FROM meta WHERE source = ? AND pid = ?', (source, pid))\
-                       .fetchone()[0] > 0
+            result = cursor.execute('SELECT folder, filename FROM meta WHERE source = ? AND pid = ?', (source, pid)).fetchone()
+            if result is None:
+                return None
+            return result
         finally:
             cursor.close()
 
@@ -83,10 +86,8 @@ class Database:
         finally:
             cursor.close()
 
-    def query_list(self,
-                   folder=None, filename=None, source_in=None, status_in=None,
-                   create_from=None, analyse_from=None,
-                   order=None, limit=None):
+    def query_list(self, folder=None, filename=None, source_in=None, status_in=None,
+                   create_from=None, analyse_from=None, order=None, limit=None):
         sql = 'SELECT source, pid, status, folder, filename, tags, relations, meta, create_time, analyse_time FROM meta'
         parameters = []
 
@@ -147,20 +148,16 @@ class Database:
         finally:
             cursor.close()
 
-    def create(self, source, pid, folder=None, filename=None, replace=True):
+    def insert(self, source, pid, folder=None, filename=None, replace=True):
         cursor = self.__conn.cursor()
         try:
-            if cursor.execute('SELECT count(1) FROM meta WHERE source = ? AND pid = ?', (source, pid))\
-                       .fetchone()[0] > 0:
+            if cursor.execute('SELECT count(1) FROM meta WHERE source = ? AND pid = ?', (source, pid)).fetchone()[0] > 0:
                 if replace:
-                    cursor.execute('UPDATE meta SET folder = ?, filename = ?, create_time = ? '
-                                   'WHERE source = ? AND pid = ?',
+                    cursor.execute('UPDATE meta SET folder = ?, filename = ?, create_time = ? WHERE source = ? AND pid = ?',
                                    (folder, filename, datetime.datetime.now(), source, pid))
                 return False
             else:
-                cursor.execute('INSERT INTO meta(status, folder, filename, source, pid, '
-                               'tags, relations, meta, create_time) '
-                               'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                cursor.execute('INSERT INTO meta(status, folder, filename, source, pid, tags, relations, meta, create_time)VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                                (STATUS.NOT_ANALYSED, folder, filename, source, pid,
                                 None, None, None, datetime.datetime.now()))
                 return True
@@ -168,7 +165,7 @@ class Database:
             cursor.close()
             self.__conn.commit()
 
-    def update(self, source, pid, tags, relations, meta):
+    def write_metadata(self, source, pid, tags, relations, meta):
         cursor = self.__conn.cursor()
         try:
             cursor.execute('UPDATE meta SET status = ?, tags = ?, relations = ?, meta = ?, analyse_time = ? '
@@ -183,7 +180,7 @@ class Database:
             cursor.close()
             self.__conn.commit()
 
-    def update_error(self, source, pid):
+    def write_error_status(self, source, pid):
         cursor = self.__conn.cursor()
         try:
             cursor.execute('UPDATE meta SET status = ?, analyse_time = ? WHERE source = ? AND pid = ?',
@@ -191,3 +188,34 @@ class Database:
         finally:
             cursor.close()
             self.__conn.commit()
+
+
+def scan_record_existence(db: Database, files: list[(str, str, str)]):
+    """
+    扫描指定的文件列表，是否在数据库中已有重复项。判断的依据是source和pid。
+    :return: list[(str, str, str)], list[(str, str, str, str, str)] 不存在的列表，和重复存在的列表
+    """
+    exists, not_exists = [], []
+    for (filename, source, pid) in files:
+        ex = db.query_basic(source, pid)
+        if ex is not None:
+            exists.append((filename, source, pid, *ex))
+        else:
+            not_exists.append((filename, source, pid))
+
+    return not_exists, exists
+
+
+def insert_records(db: Database, folder: str, files: list[(str, str, str)]):
+    """
+    将指定的文件信息存入数据库。
+    """
+    for (filename, source, pid) in files:
+        db.insert(source, pid, folder=folder, filename=filename, replace=True)
+
+
+def get_analyzable_records(db: Database, source: list[str]):
+    """
+    查询所有可分析的记录列表。
+    """
+    return [(item["source"], item["pid"]) for item in db.query_list(status_in=['not-analysed', 'error'], source_in=source, order=['create-time'])]

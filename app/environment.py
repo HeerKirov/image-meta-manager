@@ -1,7 +1,7 @@
 from module.adapter import Adapter
 from module.local import Local
-from module.database import Database, STATUS
-from external.complex import Complex
+from module.database import Database
+from module.external import Complex
 from app import config
 
 
