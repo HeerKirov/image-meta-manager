@@ -60,7 +60,7 @@ def download_header_printer(count: int):
     count_len = len(str(count))
 
     def print_header(i: int, source: str, pid: str, try_count: int or None, try_time: int or None, err: str or None):
-        print(("%s | %" + str(count_len) + "s/%s ") % (datetime.now().strftime("%Y-%m-%d %H:%m:%S"), i + 1, count), end="")
+        print(("%s | %" + str(count_len) + "s/%s ") % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), i + 1, count), end="")
         print("\033[1;33m| %8s | %-12s |\033[0m" % (source, pid), end="")
         if err is not None:
             print('\033[1;31m Failed  (try %s time(s) in %.2fs): %s\033[0m' % (try_count, try_time, err))

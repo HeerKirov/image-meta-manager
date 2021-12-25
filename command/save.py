@@ -13,7 +13,7 @@ def save(work_dir, archive, split, replace, no_meta, dry_run):
     如果不能完成任何匹配，默认是不接受移入无元数据的项的，会拒绝移入。使用no-meta选项，指示强制存储无元数据的文件，这将仅移入而不存储其元数据。
     如果文件在数据库中已存在其他相同来源项，默认也不接受重复文件存入，同样拒绝移入。使用replace选项，指示强制替代旧的文件，这也将自动移除旧文件。
 
-    :param work_dir: 显示指定工作目录，而不是使用默认路径。如果没有配置默认工作目录，则使用当前目录
+    :param work_dir: 显式指定工作目录，而不是使用默认路径。如果没有配置默认工作目录，则使用当前目录
     :param split: 指定一个分割的存档。指定后，会使用类似yyyy-MM-dd.N的存档文件夹。这可以帮助分割存放
     :param archive: 显示指定存档文件夹的位置。如果不指定，则根据今天的日期生成目录。使用此参数后split参数无效
     :param no_meta: 指示在无元数据时，仅移入而不存储元数据
@@ -64,7 +64,7 @@ def save(work_dir, archive, split, replace, no_meta, dry_run):
             pass
         if len(exist_files) > 0 and replace:
             do_move_files(work_dir, archive_target_dir, [filename for (filename, _, _, _, _) in exist_files])
-            do_delete_files(work_dir, [(folder, filename) for (_, _, _, folder, filename) in exist_files])
+            do_delete_files(conf["work_path"]["archive_dir"], [(folder, filename) for (_, _, _, folder, filename) in exist_files])
             insert_records(db, archive_dir_name, [(filename, source, pid) for (filename, source, pid, _, _) in exist_files])
             print("\033[1;32m# 由于已指定允许替代，已移动并归档%s个重复存在的文件，且已删除它们的旧文件。\033[0m" % (len(exist_files, )))
             pass

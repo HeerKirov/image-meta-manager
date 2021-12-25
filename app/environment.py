@@ -1,5 +1,4 @@
 from module.adapter import Adapter
-from module.local import Local
 from module.database import Database
 from module.external import Complex
 from app import config
@@ -37,17 +36,8 @@ def database():
     return __database
 
 
-def local():
-    global __local
-    if __local is None:
-        __local = Local(**config['local'])
-    return __local
-
-
 __external = dict()
 
 
 __database = None
 
-
-__local = None

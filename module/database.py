@@ -42,6 +42,7 @@ class Database:
             relations TEXT NULL,
             meta TEXT NULL,
             
+            deleted BOOLEAN NOT NULL DEFAULT FALSE,
             create_time TIMESTAMP NOT NULL,
             analyse_time TIMESTAMP NULL DEFAULT NULL
         )''')
@@ -52,6 +53,9 @@ class Database:
 
     def close(self):
         self.__conn.close()
+
+    def cursor(self):
+        return self.__conn.cursor()
 
     def query_basic(self, source, pid):
         cursor = self.__conn.cursor()
@@ -110,6 +114,7 @@ class Database:
         if analyse_from is not None:
             wheres.append('analyse_time > ?')
             parameters.append(analyse_from)
+        wheres.append('(NOT deleted)')
         if len(wheres) > 0:
             sql += ' WHERE ' + ' AND '.join(wheres)
 
@@ -148,12 +153,28 @@ class Database:
         finally:
             cursor.close()
 
+    def query_folders(self):
+        cursor = self.__conn.cursor()
+        try:
+            result = cursor.execute('SELECT folder FROM meta GROUP BY folder ORDER BY folder').fetchall()
+            return [f for (f,) in result]
+        finally:
+            cursor.close()
+
+    def query_folder_filenames(self, folder):
+        cursor = self.__conn.cursor()
+        try:
+            result = cursor.execute('SELECT filename FROM meta WHERE folder = ? AND NOT deleted', (folder,)).fetchall()
+            return [f for (f,) in result]
+        finally:
+            cursor.close()
+
     def insert(self, source, pid, folder=None, filename=None, replace=True):
         cursor = self.__conn.cursor()
         try:
             if cursor.execute('SELECT count(1) FROM meta WHERE source = ? AND pid = ?', (source, pid)).fetchone()[0] > 0:
                 if replace:
-                    cursor.execute('UPDATE meta SET folder = ?, filename = ?, create_time = ? WHERE source = ? AND pid = ?',
+                    cursor.execute('UPDATE meta SET folder = ?, filename = ?, create_time = ?, deleted = FALSE WHERE source = ? AND pid = ?',
                                    (folder, filename, datetime.datetime.now(), source, pid))
                 return False
             else:
@@ -168,7 +189,7 @@ class Database:
     def write_metadata(self, source, pid, tags, relations, meta):
         cursor = self.__conn.cursor()
         try:
-            cursor.execute('UPDATE meta SET status = ?, tags = ?, relations = ?, meta = ?, analyse_time = ? '
+            cursor.execute('UPDATE meta SET status = ?, tags = ?, relations = ?, meta = ?, analyse_time = ?, deleted = FALSE '
                            'WHERE source = ? AND pid = ?',
                            (STATUS.ANALYSED,
                             json.dumps(tags) if tags is not None else None,
@@ -180,10 +201,18 @@ class Database:
             cursor.close()
             self.__conn.commit()
 
+    def mark_deleted(self, folder, filename):
+        cursor = self.__conn.cursor()
+        try:
+            cursor.execute('UPDATE meta SET deleted = TRUE WHERE folder = ? AND filename = ?', (folder, filename))
+        finally:
+            cursor.close()
+            self.__conn.commit()
+
     def write_error_status(self, source, pid):
         cursor = self.__conn.cursor()
         try:
-            cursor.execute('UPDATE meta SET status = ?, analyse_time = ? WHERE source = ? AND pid = ?',
+            cursor.execute('UPDATE meta SET status = ?, analyse_time = ?, deleted = FALSE WHERE source = ? AND pid = ?',
                            (STATUS.ERROR, datetime.datetime.now(), source, pid))
         finally:
             cursor.close()
@@ -219,3 +248,74 @@ def get_analyzable_records(db: Database, source: list[str]):
     查询所有可分析的记录列表。
     """
     return [(item["source"], item["pid"]) for item in db.query_list(status_in=['not-analysed', 'error'], source_in=source, order=['create-time'])]
+
+
+def analyze_tag_types(db: Database, source: str):
+    """
+    分析现有数据的tag type的分布情况。
+    """
+    cursor = db.cursor()
+    try:
+        fetch = cursor.execute('SELECT source, tags FROM meta WHERE source = ?', (source,)).fetchall()
+
+        # name -> type
+        tag_type: dict[str, str] = dict()
+        # name -> count
+        tag_count: dict[str, int] = dict()
+        for record in fetch:
+            source, tags_str = record
+            if tags_str is not None:
+                tags = json.loads(tags_str)
+                for tag in tags:
+                    name = tag['name']
+                    tp = tag['type']
+                    tag_count[name] = tag_count[name] + 1 if name in tag_count else 1
+                    if name not in tag_type:
+                        tag_type[name] = tp
+
+        # type -> count(tag)
+        type_count: dict[str, int] = dict()
+        for tp in tag_type.values():
+            type_count[tp] = type_count[tp] + 1 if tp in type_count else 1
+    finally:
+        cursor.close()
+
+    return type_count
+
+
+def get_tag_of_type(db: Database, source: str, tag_type: str):
+    cursor = db.cursor()
+    try:
+        fetch = cursor.execute('SELECT source, tags FROM meta WHERE source = ?', (source,)).fetchall()
+
+        # name -> count
+        tag_count: dict[str, int] = dict()
+        no_this_tag = 0
+        cnt = 0
+        for record in fetch:
+            source, tags_str = record
+            if tags_str is not None:
+                tags = json.loads(tags_str)
+                any_this_tag = False
+                for tag in tags:
+                    name = tag['name']
+                    tp = tag['type']
+                    if tp == tag_type:
+                        tag_count[name] = tag_count[name] + 1 if name in tag_count else 1
+                        any_this_tag = True
+                if not any_this_tag:
+                    no_this_tag += 1
+            cnt += 1
+    finally:
+        cursor.close()
+
+    return sorted(tag_count.items(), key=lambda x: (x[1], x[0])), no_this_tag, cnt
+
+
+if __name__ == '__main__':
+    d = Database('/home/heer/.config/imm/data.db')
+    r, ntt, c = get_tag_of_type(d, 'complex', 'copyright')
+    for i in r:
+        print("%-56s: %d" % i)
+    print("%-56s: %d" % ("no this tag type", ntt))
+    print("%-56s: %d" % ("[all count]", c))

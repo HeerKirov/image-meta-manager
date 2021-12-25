@@ -31,6 +31,15 @@ def download():
     command.download()
 
 
+@imm.command("organize", help="根据选项，整理文件和数据库")
+@click.option("--deduplicate", "-d", is_flag=True, help="移除文件库中的重复文件，以最后一次存档为准，并移除稍早的重复文件")
+@click.option("--unsaved", "-s", is_flag=True, help="查找文件库中的未保存文件，并加入保存")
+@click.option("--mark-deleted", "-m", is_flag=True, help="搜索并在数据库中标记已被删除的文件，添加已删除标记")
+@click.option("--dry-run", is_flag=True, help="模拟整理结果并打印，并不实际执行整理操作")
+def organize(deduplicate, unsaved, mark_deleted, dry_run):
+    command.organize(deduplicate, unsaved, mark_deleted, dry_run)
+
+
 @imm.group(help="查询元数据库")
 def query():
     pass
