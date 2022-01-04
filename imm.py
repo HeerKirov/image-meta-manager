@@ -40,6 +40,14 @@ def organize(deduplicate, unsaved, mark_deleted, dry_run):
     command.organize(deduplicate, unsaved, mark_deleted, dry_run)
 
 
+@imm.command("export", help="导出元数据")
+@click.option("--archive", "-a", help="指定保存目录")
+@click.option("--source", "-s", help="指定来源类型")
+@click.option("--output", "-o", help="指定输出文件")
+def export(archive, source, output):
+    command.export(archive, source, output)
+
+
 @imm.group(help="查询元数据库")
 def query():
     pass
