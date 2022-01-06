@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-cd $(dirname "$(realpath "${BASH_SOURCE[0]}")")
-source venv/bin/activate
-python3 imm.py $@
+WORK_PATH=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
+source $WORK_PATH/venv/bin/activate
+python3 $WORK_PATH/imm.py $@
 deactivate
