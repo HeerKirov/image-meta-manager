@@ -37,7 +37,7 @@ def map_result_item(item):
             "source": "sankaku",
             "sourceId": int(item["pid"]),
             "tags": [{"name": i["name"], "displayName": i["title"], "type": i["type"]} for i in item["tags"]],
-            "pools": [i["name"] for i in item["relations"]["pools"]],
+            "pools": [{"title": i["name"], "key": str(i["id"])} for i in item["relations"]["pools"]],
             "relations": [int(i) for i in (item["relations"]["parent"] + item["relations"]["children"])]
         }
     else:
