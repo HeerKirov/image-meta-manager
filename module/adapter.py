@@ -5,7 +5,7 @@ import time
 
 class Adapter:
     def __init__(self,
-                 socks5=None, http=None, https=None, proxy_strategy=None,
+                 http=None, https=None, proxy_strategy=None,
                  retry_count=0, retry_time=None, timeout=None):
         """
         构造一个request adapter，并使用给定的代理策略、重试策略
@@ -31,13 +31,9 @@ class Adapter:
         self.__proxy_strategy = proxy_strategy
         self.__proxies = {}
         if https is not None:
-            self.__proxies['https'] = 'https://' + https
-        elif socks5 is not None:
-            self.__proxies['https'] = 'https://' + socks5
+            self.__proxies['https'] = https
         if http is not None:
-            self.__proxies['http'] = 'http://' + http
-        elif socks5 is not None:
-            self.__proxies['http'] = 'http://' + socks5
+            self.__proxies['http'] = http
         if len(self.__proxies) <= 0:
             self.__proxies = None
 
@@ -70,3 +66,9 @@ class Adapter:
         if error is not None:
             raise error
         return result
+
+
+if __name__ == '__main__':
+    a = Adapter(http='http://127.0.0.1:1087', https='http://127.0.0.1:1087')
+    r = a.req('GET', 'https://chan.sankakucomplex.com/post/show/16526513')
+    print(r.text)

@@ -61,7 +61,7 @@ class Complex:
             for p in div_pools:
                 matcher = reg.match(p['id'])
                 pool_id = matcher.group(1)
-                pool_name = p.find('a', target='_blank').string
+                pool_name = p.find('a').string
                 ret.append({'id': pool_id, 'name': pool_name})
             return ret
 
@@ -79,8 +79,8 @@ class Complex:
 
 
 if __name__ == '__main__':
-    obj = Complex(adapter=Adapter(retry_count=1, timeout=15))
-    r, t, c, e = obj.post(18103477)
+    obj = Complex(adapter=Adapter(retry_count=1, timeout=15, http='127.0.0.1:1087'))
+    r, t, c, e = obj.post(15652845)
     if e is not None:
         print('ERROR: ' + e)
     else:

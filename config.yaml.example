@@ -27,8 +27,8 @@ download:
   waiting_interval: 10
   strategy:
     public:
-      socks5: 127.0.0.1:1080
-      http: 127.0.0.1:1087
+      https: socks://127.0.0.1:1080
+      http: socks://127.0.0.1:1087
       retry_count: 1
       timeout: 15
     complex:
