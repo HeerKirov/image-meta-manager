@@ -22,8 +22,8 @@ def save(work_dir, archive, split, replace, no_meta, dry_run):
     """
     conf = load_conf()
     work_dir = work_dir or conf["work_path"]["default_work_dir"]
-    archive_dir_name = get_today_archive(conf["save"].get("archive_time_offset"), split)
-    archive_target_dir = archive or os.path.join(conf["work_path"]["archive_dir"], archive_dir_name)
+    archive_dir_name = archive or get_today_archive(conf["save"].get("archive_time_offset"), split)
+    archive_target_dir = os.path.join(conf["work_path"]["archive_dir"], archive_dir_name)
 
     matched_files, unmatched_files = scan_move_files(
         work_dir=work_dir,
