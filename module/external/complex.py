@@ -17,8 +17,29 @@ host = 'https://chan.sankakucomplex.com'
 
 
 class Complex:
-    def __init__(self, adapter: Adapter):
+    def __init__(self, adapter: Adapter, params: dict):
         self.__adapter = adapter
+        self.__params = params
+        self.login()
+
+    def login(self):
+        username = self.__params['username'] if 'username' in self.__params else ''
+        password = self.__params['password'] if 'password' in self.__params else ''
+        if username and password:
+            try:
+                form = {'user[name]': username, 'user[password]': password}
+                res, try_time, try_count, err = self.__adapter.request('post', '%s/user/authenticate' % (host,), data=form)
+            except IOError as err:
+                return None, 0, 0, str(err)
+            if err is not None:
+                print('Complex login failed.' + str(err))
+            elif res is None:
+                print('Complex login failed but response is not exist.')
+            elif res.status_code >= 400:
+                print('Complex login failed. status code is ' + str(res.status_code))
+            else:
+                print('Complex login succeed. username: ' + self.__params['username'])
+                print()
 
     def post(self, post_id):
         try:
@@ -79,8 +100,9 @@ class Complex:
 
 
 if __name__ == '__main__':
-    obj = Complex(adapter=Adapter(retry_count=1, timeout=15, http='127.0.0.1:1087'))
-    r, t, c, e = obj.post(15652845)
+    p = {'username': '', 'password': ''}
+    obj = Complex(adapter=Adapter(retry_count=1, timeout=15, http='127.0.0.1:1087'), params=p)
+    r, t, c, e = obj.post(31622750)
     if e is not None:
         print('ERROR: ' + e)
     else:

@@ -11,7 +11,7 @@ def download():
     """
     conf = load_conf()
     db = Database(conf["work_path"]["db_path"])
-    external = External(conf["download"].get("strategy", {}))
+    external = External(conf["download"].get("strategy", {}), conf["download"].get("params", {}))
     waiting_interval = conf["download"].get("waiting_interval", 0)
 
     records = get_analyzable_records(db, available_types)

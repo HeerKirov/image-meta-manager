@@ -35,3 +35,7 @@ download:
       proxy_strategy: 0
     pixiv:
       proxy_strategy: 'always'
+  params:
+    complex:
+      username: ''
+      password: ''
