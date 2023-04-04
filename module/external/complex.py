@@ -1,4 +1,5 @@
 import re
+import time
 from bs4 import BeautifulSoup
 from module.adapter import Adapter
 
@@ -27,7 +28,7 @@ class Complex:
         password = self.__params['password'] if 'password' in self.__params else ''
         if username and password:
             try:
-                form = {'user[name]': username, 'user[password]': password}
+                form = {'user[name]': username, 'user[password]': password, 'commit': 'Login', 'url': ''}
                 res, try_time, try_count, err = self.__adapter.request('post', '%s/user/authenticate' % (host,), data=form)
             except IOError as err:
                 return None, 0, 0, str(err)
@@ -40,6 +41,7 @@ class Complex:
             else:
                 print('Complex login succeed. username: ' + self.__params['username'])
                 print()
+                time.sleep(2)
 
     def post(self, post_id):
         try:
