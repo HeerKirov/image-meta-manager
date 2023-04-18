@@ -1,11 +1,12 @@
 from .complex import Complex
+from .beta_complex import BetaComplex
 from .pixiv import Pixiv
 from .simulator import Simulator
 from module.adapter import Adapter
 
 
 external_mapping = {
-    'complex': Complex
+    'complex': BetaComplex
 }
 
 available_types = ['complex']

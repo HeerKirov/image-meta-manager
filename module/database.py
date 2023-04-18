@@ -145,7 +145,7 @@ class Database:
                     'filename': filename,
                     'tags': json.loads(tags) if tags is not None else None,
                     'relations': json.loads(relations) if relations is not None else None,
-                    'meta': json.load(meta) if meta is not None else None,
+                    'meta': json.loads(meta) if meta is not None else None,
                     'create_time': create_time,
                     'analyse_time': analyse_time
                 })

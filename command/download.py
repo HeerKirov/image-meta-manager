@@ -48,7 +48,9 @@ def download():
             db.write_error_status(source, pid)
             failed_num += 1
         else:
-            db.write_metadata(source, pid, result['tags'], {'pools': result['pools'], 'parent': result['parent'], 'children': result['children']}, None)
+            relations = {'pools': result['pools'], 'parent': result['parent'], 'children': result['children']}
+            meta = {'source': result['source'], 'rating': result['rating'], 'md5': result['md5']}
+            db.write_metadata(source, pid, result['tags'], relations, meta)
             success_num += 1
 
     end_download_time = datetime.now()
