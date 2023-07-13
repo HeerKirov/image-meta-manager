@@ -39,17 +39,17 @@ def get_appdata_dir():
 def load_conf():
     """
     从合适的位置加载config.yaml配置文件。
-    通常，首先尝试从用户目录的 %APPDATA%/imm/config.yaml加载。
-    如果此文件不存在，那么尝试从程序的根目录加载。
+    通常，首先尝试从程序的根目录加载。
+    如果此文件不存在，那么尝试从用户目录的 %APPDATA%/imm/config.yaml加载。
     再次，尝试从工作目录直接读取。
     :return: 配置文件内容
     """
-    appdata_dir = get_appdata_dir()
-    conf = appdata_dir and read_conf(os.path.join(appdata_dir, "imm/config.yaml"))
+    conf = read_conf(os.path.join(os.path.split(os.path.realpath(__file__))[0], "../config.yaml"))
     if conf is not None:
         return conf
 
-    conf = read_conf(os.path.join(os.path.split(os.path.realpath(__file__))[0], "../config.yaml"))
+    appdata_dir = get_appdata_dir()
+    conf = appdata_dir and read_conf(os.path.join(appdata_dir, "imm/config.yaml"))
     if conf is not None:
         return conf
 

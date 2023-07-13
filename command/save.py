@@ -47,8 +47,8 @@ def save(work_dir, archive, split, replace, no_meta, dry_run):
     if len(exist_files) > 0:
         print()
         print("# === 发现已存在文件 %s项 ===" % (len(exist_files),))
-        filename_max_length = max([len(o) for (o, _, _, _, _) in exist_files])
-        for (filename, source, pid, exist_archive, exist_filename) in exist_files:
+        filename_max_length = max([len(o) for (o, _, _, _, _, _) in exist_files])
+        for (filename, source, pid, _, exist_archive, exist_filename) in exist_files:
             print(("* \033[1;33m%-" + str(filename_max_length) + "s\033[0m : \033[1;33m%s/%s\033[0m") % (filename, exist_archive, exist_filename))
 
     print()
@@ -56,16 +56,16 @@ def save(work_dir, archive, split, replace, no_meta, dry_run):
     if not dry_run:
         if len(move_files) > 0:
             insert_records(db, archive_dir_name, move_files)
-            do_move_files(work_dir, archive_target_dir, [filename for (filename, _, _) in move_files])
+            do_move_files(work_dir, archive_target_dir, [filename for (filename, _, _, _) in move_files])
             print("\033[1;32m# 已移动并归档%s个文件。\033[0m" % (len(move_files,)))
         if len(unmatched_files) > 0 and no_meta:
             do_move_files(work_dir, archive_target_dir, unmatched_files)
             print("\033[1;32m# 由于已指定允许无元数据归档，已移动%s个未匹配的文件。\033[0m" % (len(unmatched_files,)))
             pass
         if len(exist_files) > 0 and replace:
-            do_move_files(work_dir, archive_target_dir, [filename for (filename, _, _, _, _) in exist_files])
-            do_delete_files(conf["work_path"]["archive_dir"], [(folder, filename) for (_, _, _, folder, filename) in exist_files])
-            insert_records(db, archive_dir_name, [(filename, source, pid) for (filename, source, pid, _, _) in exist_files])
+            do_delete_files(conf["work_path"]["archive_dir"], [(folder, filename) for (_, _, _, _, folder, filename) in exist_files])
+            do_move_files(work_dir, archive_target_dir, [filename for (filename, _, _, _, _, _) in exist_files])
+            insert_records(db, archive_dir_name, [(filename, source, pid, metadata) for (filename, source, pid, metadata, _, _) in exist_files])
             print("\033[1;32m# 由于已指定允许替代，已移动并归档%s个重复存在的文件，且已删除它们的旧文件。\033[0m" % (len(exist_files, )))
             pass
 

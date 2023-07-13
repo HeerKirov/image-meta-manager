@@ -37,7 +37,7 @@ def __unsaved(conf, db: Database, dry_run: bool):
             extensions=conf.get("supported_extensions")
         )
 
-        for filename, source, pid in matched_files:
+        for filename, source, pid, _ in matched_files:
             r = db.query_basic(source, pid)
             if r is None:
                 # 遭遇未保存的意外文件
@@ -80,7 +80,7 @@ def __deduplicate(conf, db: Database, dry_run: bool):
             extensions=conf.get("supported_extensions")
         )
 
-        for filename, source, pid in matched_files:
+        for filename, source, pid, _ in matched_files:
             r = db_query_cache.get((source, pid), None)
             if r is None:
                 # 还未建立缓存，表示当前查到的项是最新的那个项

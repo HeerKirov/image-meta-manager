@@ -169,13 +169,24 @@ class Database:
         finally:
             cursor.close()
 
-    def insert(self, source, pid, folder=None, filename=None, replace=True):
+    def insert(self, source, pid, folder: str = None, filename: str = None, metadata: dict[str, str] = None, replace=True):
         cursor = self.__conn.cursor()
         try:
-            if cursor.execute('SELECT count(1) FROM meta WHERE source = ? AND pid = ?', (source, pid)).fetchone()[0] > 0:
+            result = cursor.execute('SELECT id, meta FROM meta WHERE source = ? AND pid = ? LIMIT 1', (source, pid)).fetchone()
+            if result is not None:
                 if replace:
-                    cursor.execute('UPDATE meta SET folder = ?, filename = ?, create_time = ?, deleted = FALSE WHERE source = ? AND pid = ?',
-                                   (folder, filename, datetime.datetime.now(), source, pid))
+                    (_, old_metadata) = result
+                    if metadata is not None and len(metadata) > 0:
+                        new_metadata = json.loads(old_metadata) if old_metadata is not None else {}
+                        for (k, v) in metadata.items():
+                            new_metadata[k] = v
+                        cursor.execute(
+                            'UPDATE meta SET folder = ?, filename = ?, create_time = ?, meta = ?, deleted = FALSE WHERE source = ? AND pid = ?',
+                            (folder, filename, datetime.datetime.now(), json.dumps(new_metadata), source, pid))
+                    else:
+                        cursor.execute(
+                            'UPDATE meta SET folder = ?, filename = ?, create_time = ?, deleted = FALSE WHERE source = ? AND pid = ?',
+                            (folder, filename, datetime.datetime.now(), source, pid))
                 return False
             else:
                 cursor.execute('INSERT INTO meta(status, folder, filename, source, pid, tags, relations, meta, create_time)VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -219,28 +230,28 @@ class Database:
             self.__conn.commit()
 
 
-def scan_record_existence(db: Database, files: list[(str, str, str)]):
+def scan_record_existence(db: Database, files: list[(str, str, str, dict[str, str])]):
     """
     扫描指定的文件列表，是否在数据库中已有重复项。判断的依据是source和pid。
-    :return: list[(str, str, str)], list[(str, str, str, str, str)] 不存在的列表，和重复存在的列表
+    :return: list[(str, str, str, dict[str, str])], list[(str, str, str, dict[str, str], str, str)] 不存在的列表，和重复存在的列表
     """
     exists, not_exists = [], []
-    for (filename, source, pid) in files:
+    for (filename, source, pid, metadata) in files:
         ex = db.query_basic(source, pid)
         if ex is not None:
-            exists.append((filename, source, pid, *ex))
+            exists.append((filename, source, pid, metadata, *ex))
         else:
-            not_exists.append((filename, source, pid))
+            not_exists.append((filename, source, pid, metadata))
 
     return not_exists, exists
 
 
-def insert_records(db: Database, folder: str, files: list[(str, str, str)]):
+def insert_records(db: Database, folder: str, files: list[(str, str, str, dict[str, str])]):
     """
     将指定的文件信息存入数据库。
     """
-    for (filename, source, pid) in files:
-        db.insert(source, pid, folder=folder, filename=filename, replace=True)
+    for (filename, source, pid, metadata) in files:
+        db.insert(source, pid, folder=folder, filename=filename, metadata=metadata, replace=True)
 
 
 def get_analyzable_records(db: Database, source: list[str]):

@@ -173,17 +173,23 @@ def do_rename_files(work_dir, rename_list: list[(str, str)]):
 
 def __get_source_info(name: str, rules: list[dict]):
     """
-    分析指定name是否与某条规则匹配。如果符合匹配，则提取source和pid。
+    分析指定name是否与某条规则匹配。如果符合匹配，则提取source、pid与metadata。
     :param name: 文件名部分
     :param rules: 识别规则
-    :return: (str, str) or None
+    :return: (str, str, dict[str, str]) or None
     """
     for rule in rules:
         matcher = rule["filename"].match(name)
         if matcher is not None:
             try:
                 analysed_pid = matcher.group(rule.get("group") or 1)
-                return rule["source"], analysed_pid
+                metadata = {}
+                if rule.get("metadata") is not None:
+                    for (g, field) in rule.get("metadata").items():
+                        result = matcher.group(g)
+                        if result is not None:
+                            metadata[field] = result
+                return rule["source"], analysed_pid, metadata
             except IndexError:
                 raise IndexError("no such group. Name is '%s', rule is '%s', group id is '%s'." % (name, rule["filename"], rule.get("group") or 1))
     return None
@@ -195,14 +201,14 @@ def scan_move_files(work_dir: str, rules: list[dict], extensions: list[str]):
     :param work_dir: 工作目录
     :param rules: 识别规则，结构参考config.yaml的save.rules
     :param extensions: 支持扫描的文件类型
-    :return: (list[(str, str, str)], list[str]) 给出(文件名, source, pid)的元组列表，和不匹配文件的列表
+    :return: (list[(str, str, str, dict[str, str])], list[str]) 给出(文件名, source, pid, metadata)的元组列表，和不匹配文件的列表
     """
     # 预处理规则
-    rules = [{"filename": re.compile(rule["filename"]), "source": rule["source"], "group": rule.get("group")} for rule in rules]
+    rules = [{"filename": re.compile(rule["filename"]), "source": rule["source"], "group": rule.get("group"), "metadata": rule.get("metadata")} for rule in rules]
     # 扫描并过滤基本文件列表
     files: list[(str, str)] = __split_and_filter_extensions(__get_files_in_directory(work_dir), extensions)
     # 根据文件列表和规则清单匹配，分理出matched和unmatched项
-    analyzed_files: list[(str, (str, str))] = [(__get_fullname(name, extension), __get_source_info(name, rules)) for (name, extension) in files]
+    analyzed_files: list[(str, (str, str, dict[str, str]))] = [(__get_fullname(name, extension), __get_source_info(name, rules)) for (name, extension) in files]
 
     matched = [(filename, *s) for (filename, s) in analyzed_files if s is not None]
     unmatched = [filename for (filename, s) in analyzed_files if s is None]
