@@ -27,7 +27,7 @@ def __filter_into(li: list, condition):
     return a, b
 
 
-def __get_name_and_extension(filename: str):
+def get_name_and_extension(filename: str):
     """
     取得指定文件的名称和扩展名部分。
     """
@@ -171,7 +171,7 @@ def do_rename_files(work_dir, rename_list: list[(str, str)]):
         os.rename(os.path.join(work_dir, old), os.path.join(work_dir, new))
 
 
-def __get_source_info(name: str, rules: list[dict]):
+def get_source_info(name: str, rules: list[dict]):
     """
     分析指定name是否与某条规则匹配。如果符合匹配，则提取source、pid与metadata。
     :param name: 文件名部分
@@ -208,7 +208,7 @@ def scan_move_files(work_dir: str, rules: list[dict], extensions: list[str]):
     # 扫描并过滤基本文件列表
     files: list[(str, str)] = __split_and_filter_extensions(__get_files_in_directory(work_dir), extensions)
     # 根据文件列表和规则清单匹配，分理出matched和unmatched项
-    analyzed_files: list[(str, (str, str, dict[str, str]))] = [(__get_fullname(name, extension), __get_source_info(name, rules)) for (name, extension) in files]
+    analyzed_files: list[(str, (str, str, dict[str, str]))] = [(__get_fullname(name, extension), get_source_info(name, rules)) for (name, extension) in files]
 
     matched = [(filename, *s) for (filename, s) in analyzed_files if s is not None]
     unmatched = [filename for (filename, s) in analyzed_files if s is None]

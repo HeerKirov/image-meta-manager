@@ -1,22 +1,26 @@
-from module.local import scan_move_files, do_delete_files, scan_folders, scan_not_existing_files
+import re
+
+from module.local import scan_move_files, do_delete_files, scan_folders, scan_not_existing_files, get_source_info, \
+    get_name_and_extension
 from module.database import Database, insert_records
 from module.config import load_conf
 import os
 
 
-def organize(deduplicate, unsaved, mark_deleted, dry_run):
+def organize(deduplicate, unsaved, mark_deleted, analyse_metadata, dry_run):
     """
     进行文件存储和数据库整理。
     :param deduplicate: 移除文件库中的重复文件，以最后一次存档为准
     :param unsaved: 查找文件库中的未保存文件
     :param mark_deleted: 搜索并在数据库中标记已被删除的文件
     :param dry_run: 试运行，生成并打印执行计划，但不实际执行计划
+    :param analyse_metadata: 查找空元数据的项，并重新生成元数据
     """
     conf = load_conf()
     db = Database(conf["work_path"]["db_path"])
 
     print("# 文件整理")
-    if not unsaved and not deduplicate and not mark_deleted:
+    if not unsaved and not deduplicate and not mark_deleted and not analyse_metadata:
         print("# \033[1;31m未指定任何整理项。\033[0m")
 
     if unsaved:
@@ -25,6 +29,8 @@ def organize(deduplicate, unsaved, mark_deleted, dry_run):
         __deduplicate(conf, db, dry_run)
     if mark_deleted:
         __mark_deleted(conf, db, dry_run)
+    if analyse_metadata:
+        __analyse_metadata(conf, db, dry_run)
 
 
 def __unsaved(conf, db: Database, dry_run: bool):
@@ -154,4 +160,37 @@ def __mark_deleted(conf, db: Database, dry_run):
             print("\033[1;32m# 已标记%s条已删除记录。\033[0m" % (deleted_record_count, ))
 
     else:
-        print("# === 未发已删除但未标记的记录 ===")
+        print("# === 未发现已删除但未标记的记录 ===")
+
+
+def __analyse_metadata(conf, db: Database, dry_run: bool):
+    rules = [{"filename": re.compile(rule["filename"]), "source": rule["source"], "group": rule.get("group"), "metadata": rule.get("metadata")} for rule in conf["save"]["rules"] if "metadata" in rule]
+    rule_source_types = [rule["source"] for rule in rules]
+
+    matched_records = []
+
+    ret = db.query_list(source_in=rule_source_types)
+    for item in ret:
+        if item["meta"] is None:
+            name, _ = get_name_and_extension(item["filename"])
+            r = get_source_info(name, rules)
+            if r is not None:
+                _, _, metadata = r
+                if len(metadata) > 0:
+                    matched_records.append((item["source"], item["pid"], metadata))
+
+    print()
+    if len(matched_records) > 0:
+        print("# === 发现需要重新分析metadata的记录 %s条 ===" % (len(matched_records),))
+        for (s, i, m) in matched_records:
+            print("\033[1;33m| %8s | %-12s |\033[0m %s" % (s, i, m))
+
+        if not dry_run:
+            for (s, i, m) in matched_records:
+                db.write_only_meta(s, i, meta=m)
+
+            print()
+            print("\033[1;32m# 已重新分析%s条记录。\033[0m" % (len(matched_records),))
+
+    else:
+        print("# === 未发现需要重新分析的记录 ===")

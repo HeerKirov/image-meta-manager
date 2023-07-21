@@ -191,8 +191,17 @@ class Database:
             else:
                 cursor.execute('INSERT INTO meta(status, folder, filename, source, pid, tags, relations, meta, create_time)VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                                (STATUS.NOT_ANALYSED, folder, filename, source, pid,
-                                None, None, None, datetime.datetime.now()))
+                                None, None, json.dumps(metadata) if metadata is not None else None, datetime.datetime.now()))
                 return True
+        finally:
+            cursor.close()
+            self.__conn.commit()
+
+    def write_only_meta(self, source, pid, meta):
+        cursor = self.__conn.cursor()
+        try:
+            cursor.execute('UPDATE meta SET meta = ?, analyse_time = ?, deleted = FALSE WHERE source = ? AND pid = ?',
+                           (json.dumps(meta) if meta is not None else None, datetime.datetime.now(), source, pid))
         finally:
             cursor.close()
             self.__conn.commit()
